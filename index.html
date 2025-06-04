@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -149,6 +150,8 @@
     setInterval(fetchPrice, 3000);
     marketDropdown.addEventListener('change', fetchPrice);
 
+    
+    
     function calculate() {
       const entry = parseFloat(document.getElementById('entry').value);
       const exit = parseFloat(document.getElementById('exit').value);
@@ -157,24 +160,39 @@
       const wallet = parseFloat(document.getElementById('walletBalance').value);
       const side = document.getElementById('side').value;
 
-      if (!entry || !exit || !amount || !leverage) return;
+      if (!entry || !exit || !amount || !leverage || !wallet) {
+        alert("অনুগ্রহ করে সঠিকভাবে সব ইনপুট পূরণ করুন");
+        return;
+      }
 
       const fee = 0.0004;
       const positionSize = amount / entry;
-      const breakeven = entry * (1 + fee * 2);
-      const pnl = side === 'long' ? (exit - entry) * positionSize : (entry - exit) * positionSize;
+      const breakeven = side === 'long'
+        ? entry + (fee * 2 * entry)
+        : entry - (fee * 2 * entry);
+
+      const pnl = side === 'long'
+        ? (exit - entry) * positionSize
+        : (entry - exit) * positionSize;
+
       const profit = pnl - (entry * fee * positionSize) - (exit * fee * positionSize);
       const rr = Math.abs(pnl / (entry * 0.01 * positionSize)).toFixed(2);
-      const liqPrice = side === 'long'
-        ? entry - (entry / leverage) + (entry * 0.004)
-        : entry + (entry / leverage) - (entry * 0.004);
 
-      document.getElementById('breakeven').textContent = breakeven.toFixed(2);
-      document.getElementById('netProfit').textContent = profit.toFixed(2);
+      // Realistic liquidation price estimation
+      let liqPrice;
+      if (side === 'long') {
+        liqPrice = entry - (wallet / (positionSize * leverage));
+      } else {
+        liqPrice = entry + (wallet / (positionSize * leverage));
+      }
+
+      document.getElementById('breakeven').textContent = breakeven.toFixed(2) + ' USD';
+      document.getElementById('netProfit').textContent = profit.toFixed(2) + ' USD';
       document.getElementById('rr').textContent = rr;
-      document.getElementById('levSuggest').textContent = (entry / (entry - liqPrice)).toFixed(1);
-      document.getElementById('liqPrice').textContent = liqPrice.toFixed(2);
+      document.getElementById('levSuggest').textContent = (entry / Math.abs(entry - liqPrice)).toFixed(1) + 'x';
+      document.getElementById('liqPrice').textContent = liqPrice.toFixed(2) + ' USD';
     }
+
 
     fetchMarkets().then(fetchPrice);
   </script>
